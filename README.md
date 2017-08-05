@@ -1,4 +1,4 @@
-# MinesweeperServer 
+# MinesweeperAIClient
 
 A C++ console minesweeper Client works on multiple platform with this [server](https://github.com/yjs990427/gccMinesweeperAIServer). 
 
