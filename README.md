@@ -7,7 +7,7 @@ A C++ console minesweeper Client works on multiple platform with this [server](h
 Boost Library is needed to build this project.
 
 1. Download or clone this repo
-2. Build with `g++` with all the `.cpp` files with `-lboost_system` and `-pthread` option. 
+2. Build with `g++` with all the `.cpp` files with `-lboost_system` and `-pthread` flags. 
 
 If you want to debug, then put `-g` flag at the back.
 
