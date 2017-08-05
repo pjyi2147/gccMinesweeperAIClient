@@ -1,6 +1,6 @@
 # MinesweeperServer 
 
-A C++ console minesweeper Client works on multiple platform with this [server](https://github.com/yjs990427/gccMinesweeperServer). 
+A C++ console minesweeper Client works on multiple platform with this [server](https://github.com/yjs990427/gccMinesweeperAIServer). 
 
 ## Usage 
 
