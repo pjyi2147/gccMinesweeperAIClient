@@ -1,10 +1,11 @@
 #include <iostream>
 #include <vector>
-#include "tile.h"
-#include "minesweeper.h"
 #include <ctime>
 
 #include "json.hpp"
+
+#include "tile.h"
+#include "minesweeper.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -75,7 +76,7 @@ void MineSweeper::update(json info)
 		if (isdigit(k))
 		{
 			this->_minefield[row][col].setNeighborCount(k - 48);
-			this->_minefield[row][col].reveal();
+			this->_minefield[row][col].setReveal();
 			if (this->_minefield[row][col].returnNeighborCount() == 0)
 			{
 				this->_minefield[row][col].setDone(true);
@@ -98,7 +99,7 @@ void MineSweeper::update(json info)
 		// when mined;
 		else if (k == 'M')
 		{
-			this->_minefield[row][col].reveal();
+			this->_minefield[row][col].setReveal();
 			this->_minefield[row][col].setMine();
 		}
 	}
@@ -187,7 +188,7 @@ void MineSweeper::printMineField()
 void MineSweeper::revealTile(int col, int row)
 {
 
-	this->_minefield[row][col].reveal();
+	this->_minefield[row][col].setReveal();
 	if (this->_minefield[row][col].isMine())
 	{
 		this->setGameEnd(true);
@@ -352,7 +353,7 @@ void MineSweeper::EndGame(bool win)
 	{
 		for (int c = 0; c < this->returnCol(); ++c)
 		{
-			this->_minefield[r][c].reveal();
+			this->_minefield[r][c].setReveal();
 		}
 	}
 
