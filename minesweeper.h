@@ -3,58 +3,68 @@
 #include <vector>
 
 #include "tile.h"
-#include "json.hpp"
+#include "json.hpp"		// client only
 
 using namespace std;
 
 class MineSweeper
 {
 private:
+	// universal
 	int _col;
 	int _row;
 	int _mineNum;
-	bool _win = false;
-	bool _done = false;
 	Tile** _minefield;
 
 	bool _gameEnd = false;
-
+	bool _win = false;
+	
+	// client only
+	bool _done = false;
+	
 public:
+	// universal
 	MineSweeper(int col, int row, int mineNum);
-	MineSweeper(MineSweeper& m);
 	~MineSweeper();
-
-	void update(nlohmann::json info);
-
-	void countMine(int col, int row);
-	int countFlag(int col, int row);
-	int countCovered(int col, int row);
-	int countAllFlagged();
-	int countAllCovered();
 
 	void createMinefield(int col, int row);
 	void printMineField();
+	void EndGame(bool win);
+	void checkWin();
+
+	void countMine(int col, int row);
+	int countFlag(int col, int row);
 
 	void revealTile(int col, int row);
 	void revealDoubleClick(int col, int row);
 
-	void EndGame(bool win);
-	void checkWin();
-
 	void setGameEnd(bool finished);
 	void setFlag(int col, int row);
-	void setFlag(int col, int row, bool flag);
 	void setWin(bool win);
-	void setDone(int col, int row, bool done);
 
 	bool returnGameEnd();
 	int returnCol();
 	int returnRow();
 	int returnMineNum();
 	bool returnWin();
+
+	// Client only
+	MineSweeper(MineSweeper& m);
+
+	void update(nlohmann::json info);
+
+	int countCovered(int col, int row);
+	int countAllCovered();
+	int countAllFlagged();
+
+
+	void setFlag(int col, int row, bool flag);
+	void setDone(int col, int row, bool done);
+
 	bool returnDone(int col, int row);
 	bool returnCovered(int col, int row);
 	int returnNeighborCount(int col, int row);
 	bool returnFlagged(int col, int row);
 	Tile& returnTile(int col, int row);
+
 };
