@@ -79,6 +79,7 @@ void Tile::setMine()
 // set Flag
 void Tile::setFlag()
 {
+	// if flagged unflag, if unflagged flag
 	if (this->_flagged) this->_flagged = false;
 	else this->_flagged = true;
 }
