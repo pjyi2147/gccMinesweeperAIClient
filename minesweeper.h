@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "tile.h"
-#include "json.hpp"		// client only
 
 using namespace std;
 
@@ -51,15 +50,15 @@ public:
 	// Client only
 	MineSweeper(MineSweeper& m);
 
-	void update(nlohmann::json info);
-
 	int countCovered(int col, int row);
 	int countAllCovered();
 	int countAllFlagged();
 
-
 	void setFlag(int col, int row, bool flag);
 	void setDone(int col, int row, bool done);
+	void setReveal(int col, int row);
+	void setMine(int col, int row);
+	void setNeighborCount(int col, int row, int val);
 
 	bool returnDone(int col, int row);
 	bool returnCovered(int col, int row);

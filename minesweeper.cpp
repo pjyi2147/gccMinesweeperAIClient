@@ -5,10 +5,7 @@
 #include "tile.h"
 #include "minesweeper.h"
 
-#include "json.hpp"
-
 using namespace std;
-using json = nlohmann::json;
 
 /// Constructors
 // constructor with variables
@@ -36,45 +33,44 @@ MineSweeper::MineSweeper(int col, int row, int mineNum)
 // deconstructor (memory deallocation)
 MineSweeper::~MineSweeper()
 {
-	for (int r = 0; r < this->returnRow(); ++r)
+	for (int r = 0; r < this->_row; ++r)
 	{
 		delete[] this->_minefield[r];
 	}
 	delete[] this->_minefield;
 }
 
-/// Game functions 
+/// Game functions
 // create the minefield!
 void MineSweeper::createMinefield(int col, int row)
 {
-	vector<pair<int, int>> options;
-
-	for (int r = 0; r < this->returnRow(); ++r)
+	vector<int> options;
+	for (int r = 0; r < this->_row; ++r)
 	{
-		for (int c = 0; c < this->returnCol(); ++c)
+		for (int c = 0; c < this->_col; ++c)
 		{
 			if (!(r == row && c == col))
 			{
-				options.push_back(make_pair(c, r));
+				options.push_back(r * this->_col + c);
 			}
 		}
 	}
 
-	for (int i = 0; i < this->returnMineNum(); ++i)
+	for (int i = 0; i < this->_mineNum; ++i)
 	{
 		if (options.size() > 0)
 		{
 			srand(time(NULL));
 			int k = (rand() % options.size());
 			auto pair1 = options[k];
-			this->_minefield[pair1.second][pair1.first].setMine();
-			options.erase(options.begin() + k);;
+			this->_minefield[pair1 / this->_col][pair1 % this->_col].setMine();
+			options.erase(options.begin() + k);
 		}
 	}
 
-	for (int r = 0; r < this->returnRow(); ++r)
+	for (int r = 0; r < this->_row; ++r)
 	{
-		for (int c = 0; c < this->returnCol(); ++c)
+		for (int c = 0; c < this->_col; ++c)
 		{
 			this->countMine(c, r);
 		}
@@ -86,19 +82,19 @@ void MineSweeper::createMinefield(int col, int row)
 // print the minefield!
 void MineSweeper::printMineField()
 {
-	for (int c = 0; c < this->returnCol() * 2 + 1; ++c)
+	for (int c = 0; c < this->_col * 2 + 1; ++c)
 	{
 		cout << "-";
 	}
 	cout << endl;
-	for (int r = 0; r < this->returnRow(); ++r)
+	for (int r = 0; r < this->_row; ++r)
 	{
-		for (int c = 0; c < this->returnCol(); ++c)
+		for (int c = 0; c < this->_col; ++c)
 		{
 			this->_minefield[r][c].printTile();
 		}
 		cout << "|" << endl;
-		for (int c = 0; c < this->returnCol() * 2 + 1; ++c)
+		for (int c = 0; c < this->_col * 2 + 1; ++c)
 		{
 			cout << "-";
 		}
@@ -109,9 +105,9 @@ void MineSweeper::printMineField()
 // End the game!
 void MineSweeper::EndGame(bool win)
 {
-	for (int r = 0; r < this->returnRow(); ++r)
+	for (int r = 0; r < this->_row; ++r)
 	{
-		for (int c = 0; c < this->returnCol(); ++c)
+		for (int c = 0; c < this->_col; ++c)
 		{
 			this->_minefield[r][c].setReveal();
 		}
@@ -127,7 +123,6 @@ void MineSweeper::EndGame(bool win)
 	{
 		cout << "Lost..." << endl;
 	}
-
 	this->setGameEnd(true);
 }
 
@@ -135,9 +130,9 @@ void MineSweeper::EndGame(bool win)
 void MineSweeper::checkWin()
 {
 	bool win = true;
-	for (int r = 0; r < this->returnRow(); ++r)
+	for (int r = 0; r < this->_row; ++r)
 	{
-		for (int c = 0; c < this->returnCol(); ++c)
+		for (int c = 0; c < this->_col; ++c)
 		{
 			if (!this->_minefield[r][c].isRevealed()
 				&& !this->_minefield[r][c].isMine())
@@ -148,7 +143,6 @@ void MineSweeper::checkWin()
 	{
 		this->setGameEnd(true);
 		this->setWin(true);
-		this->EndGame(true);
 	}
 }
 
@@ -172,8 +166,8 @@ void MineSweeper::countMine(int col, int row)
 			int c = col + xoff;
 			int r = row + yoff;
 
-			if (c > -1 && c < this->returnCol()
-				&& r > -1 && r < this->returnRow())
+			if (c > -1 && c < this->_col
+				&& r > -1 && r < this->_row)
 			{
 				if (this->_minefield[r][c].isMine()) total += 1;
 			}
@@ -195,8 +189,8 @@ int MineSweeper::countFlag(int col, int row)
 				int c = col + xoff;
 				int r = row + yoff;
 
-				if (c > -1 && c < this->returnCol()
-					&& r > -1 && r < this->returnRow())
+				if (c > -1 && c < this->_col
+					&& r > -1 && r < this->_row)
 				{
 					if (this->_minefield[r][c].isFlagged()) total += 1;
 				}
@@ -227,8 +221,8 @@ void MineSweeper::revealTile(int col, int row)
 				int c = col + xoff;
 				int r = row + yoff;
 
-				if (c > -1 && c < this->returnCol() && r > -1
-					&& r < this->returnRow())
+				if (c > -1 && c < this->_col
+					&& r > -1 && r < this->_row)
 				{
 					if (!this->_minefield[r][c].isRevealed())
 						this->revealTile(c, r);
@@ -242,12 +236,11 @@ void MineSweeper::revealTile(int col, int row)
 // safe of less or more flags
 void MineSweeper::revealDoubleClick(int col, int row)
 {
-	auto tile = this->_minefield[row][col];
 	// not revealed -> do nothing
-	if (!tile.isRevealed()) return;
+	if (!this->_minefield[row][col].isRevealed()) return;
 
 	// the flag count does not match the mine num -> do nothing
-	if (this->countFlag(col, row) != tile.returnNeighborCount()) return;
+	if (this->countFlag(col, row) != this->_minefield[row][col].returnNeighborCount()) return;
 
 	for (int yoff = -1; yoff <= 1; ++yoff)
 	{
@@ -259,8 +252,8 @@ void MineSweeper::revealDoubleClick(int col, int row)
 				int r = row + yoff;
 
 				// within range
-				if (c > -1 && c < this->returnCol() && r > -1
-					&& r < this->returnRow())
+				if (c > -1 && c < this->_col 
+					&& r > -1 && r < this->_row)
 				{
 					if (!this->_minefield[r][c].isFlagged())
 						this->revealTile(c, r);
@@ -334,60 +327,16 @@ MineSweeper::MineSweeper(MineSweeper& m)
 	this->_row = m.returnRow();
 
 	this->_minefield = new Tile*[_row];
-	for (int r = 0; r < _row; ++r)
+	for (int r = 0; r < this->_row; ++r)
 	{
 		this->_minefield[r] = new Tile[_col];
 	}
 
-	for (int r = 0; r < _row; ++r)
+	for (int r = 0; r < this->_row; ++r)
 	{
-		for (int c = 0; c < _col; ++c)
+		for (int c = 0; c < this->_col; ++c)
 		{    
 			this->_minefield[r][c] = Tile(m.returnTile(c, r));
-		}
-	}
-}
-
-// update the minefield (maybe not adaquate?)
-void MineSweeper::update(json info)
-{
-	this->setGameEnd(info["GameEnd"]);
-	this->setWin(info["win"]);
-	string mineState = info["mineField"];
-	for (int i = 0; i < mineState.length(); ++i)
-	{
-		int row = i / this->returnCol();
-		int col = i % this->returnCol();
-		// when numbers
-		int k = mineState[i];
-		if (isdigit(k))
-		{
-			this->_minefield[row][col].setNeighborCount(k - 48);
-			this->_minefield[row][col].setReveal();
-			if (this->_minefield[row][col].returnNeighborCount() == 0)
-			{
-				this->_minefield[row][col].setDone(true);
-			}
-		}
-		// when flagged;
-		else if (k == 'F')
-		{
-			if (!this->_minefield[row][col].isFlagged())
-			{
-				cout << "Something is wrong" << endl;
-			} 
-			// do nothing
-		}
-		// when covered;
-		else if (k == 'C')
-		{
-			// do nothing 
-		}
-		// when mined;
-		else if (k == 'M')
-		{
-			this->_minefield[row][col].setReveal();
-			this->_minefield[row][col].setMine();
 		}
 	}
 }
@@ -447,6 +396,7 @@ int MineSweeper::countAllFlagged()
 	return total;
 }
 
+/// set series
 // set flag for a tile with value
 void MineSweeper::setFlag(int col, int row, bool set)
 {
@@ -459,6 +409,21 @@ void MineSweeper::setFlag(int col, int row, bool set)
 void MineSweeper::setDone(int col, int row, bool done)
 {
 	this->_minefield[row][col].setDone(done);
+}
+
+// set reveal
+void MineSweeper::setReveal(int col, int row) {
+	this->_minefield[row][col].setReveal();
+}
+
+// set mine 
+void MineSweeper::setMine(int col, int row) {
+	this->_minefield[row][col].setMine();
+}
+
+// set neighborCount
+void MineSweeper::setNeighborCount(int col, int row, int val) {
+	this->_minefield[row][col].setNeighborCount(val);
 }
 
 /// return series
@@ -474,6 +439,7 @@ bool MineSweeper::returnCovered(int col, int row)
 	return !this->_minefield[row][col].isRevealed();
 }
 
+/// return series
 // returnNeighborCount of a tile 
 int MineSweeper::returnNeighborCount(int col, int row)
 {
