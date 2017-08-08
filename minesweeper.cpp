@@ -1,11 +1,10 @@
 #include <iostream>
 #include <vector>
 #include <ctime>
+#include <sstream>
 
 #include "tile.h"
 #include "minesweeper.h"
-
-using namespace std;
 
 /// Constructors
 // constructor with variables
@@ -204,13 +203,14 @@ int MineSweeper::countFlag(int col, int row)
 // reveal a single tile
 void MineSweeper::revealTile(int col, int row)
 {
-
 	this->_minefield[row][col].setReveal();
+	// if the Tile has mine
 	if (this->_minefield[row][col].isMine())
 	{
 		this->setGameEnd(true);
 		this->EndGame(false);
 	}
+	// if the neighbor count is == 0
 	if (this->_minefield[row][col].returnNeighborCount() == 0
 		&& !this->_minefield[row][col].isMine())
 	{
@@ -276,7 +276,6 @@ void MineSweeper::setFlag(int col, int row)
 {
 	if (!this->_minefield[row][col].isRevealed())
 		this->_minefield[row][col].setFlag();
-	else cout << "You cannot flag tiles that are already open" << endl;
 }
 
 // set the game is won or lost
