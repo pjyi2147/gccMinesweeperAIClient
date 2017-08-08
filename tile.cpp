@@ -24,11 +24,11 @@ Tile::Tile(int col, int row)
 void Tile::printTile()
 {
 	std::cout << "|";
-	if (this->isRevealed() && this->isMine()) cout << "M";
-	else if (this->isRevealed())
-		cout << this->returnNeighborCount();
-	else if (this->isFlagged()) cout << "F";			// Flag
-	else cout << "C";									// Covered 
+	if (this->_revealed && this->_mine) cout << "M";
+	else if (this->revealed)
+		cout << this->_neighborCount;
+	else if (this->_flagged) cout << "F";			// Flag
+	else cout << "C";								// Covered 
 }
 
 /// is series
