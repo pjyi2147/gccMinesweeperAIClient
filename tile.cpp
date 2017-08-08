@@ -25,7 +25,7 @@ void Tile::printTile()
 {
 	std::cout << "|";
 	if (this->_revealed && this->_mine) cout << "M";
-	else if (this->revealed)
+	else if (this->_revealed)
 		cout << this->_neighborCount;
 	else if (this->_flagged) cout << "F";			// Flag
 	else cout << "C";								// Covered 
