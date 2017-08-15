@@ -9,42 +9,49 @@ using boost::asio::ip::tcp;
 using namespace std;
 using json = nlohmann::json;
 
-void client()
+void update(MineSweeper* m, json info)
 {
-	try
+	int _col = m->returnCol(), _row = m->returnRow();
+	m->setGameEnd(info["GameEnd"]);
+	m->setWin(info["win"]);
+	string mineState = info["mineField"];
+	for (int i = 0; i < mineState.length(); ++i)
 	{
-		boost::asio::io_service io_service;
-
-		tcp::resolver resolver(io_service);
-
-		tcp::resolver::query query("localhost", "1234");
-
-		tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-
-		tcp::socket socket(io_service);
-
-		boost::asio::connect(socket, endpoint_iterator);
-
-		for (;;)
+		int row = i / _col;
+		int col = i % _col;
+		// when numbers
+		int k = mineState[i];
+		if (isdigit(k))
 		{
-			boost::array<char, 128> buf;
-			boost::system::error_code error;
-			size_t len = socket.read_some(boost::asio::buffer(buf), error);
-
-
-			if (error == boost::asio::error::eof) break;
-			else if (error)
-				throw boost::system::system_error(error);
-
-			boost::system::error_code ignored_error;
-			std::string message = "Received!";
-			boost::asio::write(socket, boost::asio::buffer(message), ignored_error);
-			std::cout.write(buf.data(), len);
+			m->setNeighborCount(col, row, k - 48);
+			m->setReveal(col, row);
+			if (m->returnNeighborCount(col, row) == 0)
+			{
+				m->setDone(col, row, true);
+			}
 		}
-	}
-	catch (std::exception& e)
-	{
-		std::cerr << e.what() << std::endl;
+		// when flagged;
+		else if (k == 'F')
+		{
+			if (!m->returnFlagged(col, row))
+			{
+				cout << "Something is wrong" << endl;
+			}
+		}
+		// when covered;
+		else if (k == 'C')
+		{
+			if (!m->returnCovered(col, row)) 
+			{
+				cout << "Something is wrong" << endl;
+			}
+		}
+		// when mined;
+		else if (k == 'M')
+		{
+			m->setReveal(col, row);
+			m->setMine(col, row);
+		}
 	}
 }
 
@@ -52,6 +59,7 @@ void startGamefunction(int &col, int &row, int &mineNum)
 {
 	try
 	{
+		// setup
 		boost::asio::io_service io_service;
 		tcp::resolver resolver(io_service);
 		tcp::resolver::query query("localhost", "1234");
@@ -78,7 +86,7 @@ void startGamefunction(int &col, int &row, int &mineNum)
 
 		// read
 		cout << "Reading messages..." << endl;
-		boost::array<char, 1000> buf;
+		boost::array<char, 512> buf;
 		boost::system::error_code error;
 		size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
@@ -86,10 +94,11 @@ void startGamefunction(int &col, int &row, int &mineNum)
 			throw boost::system::system_error(error);
 		auto message_rec = string(buf.begin(), buf.begin()+len);
 		auto message_rec_json = json::parse(message_rec);
+		cout << "Message read: " << message_rec << endl;
+
 		col = message_rec_json["col"];
 		row = message_rec_json["row"];
 		mineNum = message_rec_json["mineNum"];
-		cout << "Message read: " << message_rec << endl;
 	}
 	catch (std::exception& e)
 	{
@@ -97,11 +106,11 @@ void startGamefunction(int &col, int &row, int &mineNum)
 	}
 }
 
-
 void firstScriptTransfer(int col, int row, nlohmann::json& info)
 {
 	try
 	{
+		// setup
 		boost::asio::io_service io_service;
 		tcp::resolver resolver(io_service);
 		tcp::resolver::query query("localhost", "1234");
@@ -124,7 +133,7 @@ void firstScriptTransfer(int col, int row, nlohmann::json& info)
 
 		// read
 		cout << "Reading messages..." << endl;
-		boost::array<char, 1000> buf;
+		boost::array<char, 512> buf;
 		boost::system::error_code error;
 		size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
@@ -144,6 +153,7 @@ void ingameTransfer(nlohmann::json* to_send, nlohmann::json* info, MineSweeper* 
 {
 	try
 	{
+		// setup
 		boost::asio::io_service io_service;
 		tcp::resolver resolver(io_service);
 		tcp::resolver::query query("localhost", "1234");
@@ -161,7 +171,7 @@ void ingameTransfer(nlohmann::json* to_send, nlohmann::json* info, MineSweeper* 
 
 		// read
 		cout << "Reading messages..." << endl;
-		boost::array<char, 1000> buf;
+		boost::array<char, 512> buf;
 		boost::system::error_code error;
 		size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
@@ -170,7 +180,7 @@ void ingameTransfer(nlohmann::json* to_send, nlohmann::json* info, MineSweeper* 
 		auto message_rec = string(buf.begin(), buf.begin() + len);
 		*info = json::parse(message_rec);
 		cout << "Message read: " << message_rec << endl;
-		m->update(*info);
+		update(m, *info);
 	}
 	catch (std::exception& e)
 	{

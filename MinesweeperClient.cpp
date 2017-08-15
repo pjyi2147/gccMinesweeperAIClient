@@ -8,6 +8,8 @@
 #include "json.hpp"
 #include "AI.h"
 
+#include <boost/thread/thread.hpp>
+
 using namespace std;
 using json = nlohmann::json;
 
@@ -15,6 +17,7 @@ void GameLoop(json* info, json* to_send, MineSweeper *m)
 {
 	m->printMineField();
 	AI(m, to_send);
+	boost::this_thread::sleep(boost::posix_time::milliseconds(100));
 	ingameTransfer(to_send, info, m);
 }
 
@@ -27,20 +30,20 @@ int main()
 
 	json info, to_send;
 	firstScriptTransfer(col, row, info);
-	minefield->update(info);
+	update(minefield, info);
+	
 	while (!info["GameEnd"])
 	{
 		GameLoop(&info, &to_send, minefield);
 	}
 
+	minefield->printMineField();
 	if (info["win"])
 	{
-		minefield->printMineField();
 		cout << "won!" << endl;
 	}
 	else
 	{
-		minefield->printMineField();
 		cout << "lost..." << endl;
 	}
 	cin.ignore();
