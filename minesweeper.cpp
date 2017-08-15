@@ -74,7 +74,7 @@ void MineSweeper::createMinefield(int col, int row)
 			this->countMine(c, r);
 		}
 	}
-
+	
 	this->revealTile(col, row);
 }
 
