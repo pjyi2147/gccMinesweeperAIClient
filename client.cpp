@@ -5,8 +5,8 @@
 #include "json.hpp"
 #include "minesweeper.h"
 
-using boost::asio::ip::tcp;
 using namespace std;
+using boost::asio::ip::tcp;
 using json = nlohmann::json;
 
 void update(MineSweeper* m, json info)
@@ -15,7 +15,8 @@ void update(MineSweeper* m, json info)
 	m->setGameEnd(info["GameEnd"]);
 	m->setWin(info["win"]);
 	string mineState = info["mineField"];
-	for (int i = 0; i < mineState.length(); ++i)
+	int length1 = mineState.length();
+	for (int i = 0; i < length1; ++i)
 	{
 		int row = i / _col;
 		int col = i % _col;
@@ -35,7 +36,7 @@ void update(MineSweeper* m, json info)
 		{
 			if (!m->returnFlagged(col, row))
 			{
-				cout << "Something is wrong" << endl;
+				cout << "Col: " << col << " Row: " << row << " should be flagged but not flagged" << endl;
 			}
 		}
 		// when covered;
@@ -43,7 +44,7 @@ void update(MineSweeper* m, json info)
 		{
 			if (!m->returnCovered(col, row)) 
 			{
-				cout << "Something is wrong" << endl;
+				cout << "Col: " << col << " Row: " << row << " should be covered but not covered" << endl;
 			}
 		}
 		// when mined;
@@ -86,16 +87,17 @@ void startGamefunction(int &col, int &row, int &mineNum)
 
 		// read
 		cout << "Reading messages..." << endl;
-		boost::array<char, 512> buf;
+		boost::array<char, 700> buf;
 		boost::system::error_code error;
 		size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
 		if (error)
 			throw boost::system::system_error(error);
 		auto message_rec = string(buf.begin(), buf.begin()+len);
-		auto message_rec_json = json::parse(message_rec);
 		cout << "Message read: " << message_rec << endl;
-
+		
+		auto message_rec_json = json::parse(message_rec);
+		
 		col = message_rec_json["col"];
 		row = message_rec_json["row"];
 		mineNum = message_rec_json["mineNum"];
@@ -133,15 +135,15 @@ void firstScriptTransfer(int col, int row, nlohmann::json& info)
 
 		// read
 		cout << "Reading messages..." << endl;
-		boost::array<char, 512> buf;
+		boost::array<char, 700> buf;
 		boost::system::error_code error;
 		size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
 		if (error)
 			throw boost::system::system_error(error);
 		auto message_rec = string(buf.begin(), buf.begin() + len);
-		info = json::parse(message_rec);
 		cout << "Message read: " << message_rec << endl;
+		info = json::parse(message_rec);
 	}
 	catch (std::exception& e)
 	{
@@ -171,15 +173,15 @@ void ingameTransfer(nlohmann::json* to_send, nlohmann::json* info, MineSweeper* 
 
 		// read
 		cout << "Reading messages..." << endl;
-		boost::array<char, 512> buf;
+		boost::array<char, 700> buf;
 		boost::system::error_code error;
 		size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
 		if (error)
 			throw boost::system::system_error(error);
 		auto message_rec = string(buf.begin(), buf.begin() + len);
-		*info = json::parse(message_rec);
 		cout << "Message read: " << message_rec << endl;
+		*info = json::parse(message_rec);
 		update(m, *info);
 	}
 	catch (std::exception& e)
