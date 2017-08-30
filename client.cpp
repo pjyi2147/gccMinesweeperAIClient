@@ -91,10 +91,11 @@ void startGamefunction(int &col, int &row, int &mineNum)
 		boost::system::error_code error;
 		size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
-		if (error)
-			throw boost::system::system_error(error);
 		auto message_rec = string(buf.begin(), buf.begin()+len);
 		cout << "Message read: " << message_rec << endl;
+
+		if (error)
+			throw boost::system::system_error(error);
 		
 		auto message_rec_json = json::parse(message_rec);
 		
