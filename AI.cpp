@@ -1,42 +1,40 @@
-#include <vector>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <ctime>
+#include <vector>
 #include <list>
 
 #include "json.hpp"
 #include "minesweeper.h"
 
-
 using namespace std;
 using json = nlohmann::json;
 
+/// math functions
+// compare function for min value of map
+bool compare(pair<int, double> i, pair<int, double> j) {
+	return i.second < j.second;
+}
+
+// n choose k function
 unsigned nChoosek(unsigned n, unsigned k)
 {
 	if (k > n) return 0;
-	if (k * 2 > n) /*return*/ k = n - k;  //remove the commented section
+	if (k * 2 > n) k = n - k; // nCk == nC(n-k) choose smaller one
 	if (k == 0) return 1;
 
 	int result = n;
-	for (int i = 2; i <= k; ++i) {
+	for (int i = 2; i <= k; ++i) 
+	{
 		result *= (n - i + 1);
 		result /= i;
 	}
 	return result;
 }
 
-bool compare(pair<int, double> i, pair<int, double> j) {
-	return i.second < j.second;
-}
-
-string doubleClick(int col, int row)
-{
-	stringstream s;
-	s << "D " << to_string(col) << " " << to_string(row);
-	return s.str();
-}
-
+/// Click script generator functions
+// simple click 
 string simpleClick(int col, int row)
 {
 	stringstream s;
@@ -44,6 +42,15 @@ string simpleClick(int col, int row)
 	return s.str();
 }
 
+// double click
+string doubleClick(int col, int row)
+{
+	stringstream s;
+	s << "D " << to_string(col) << " " << to_string(row);
+	return s.str();
+}
+
+// flag click
 string flagClick(int col, int row)
 {
 	stringstream s;
@@ -51,18 +58,21 @@ string flagClick(int col, int row)
 	return s.str();
 }
 
+/// Basic AI methods 
+// Flag a tile when it is 100% sure of being mined.
 void basicFlagging(MineSweeper* m, vector<string>* orders)
 {
-	for (int r = 0; r < m->returnRow(); ++r)
+	int _col = m->returnCol(), _row = m->returnRow();
+	for (int r = 0; r < _row; ++r)
 	{
-		for (int c = 0; c < m->returnCol(); ++c)
+		for (int c = 0; c < _col; ++c)
 		{
 			// when the tile is done or covered, then continue;
 			if (m->returnDone(c, r) || m->returnCovered(c, r))
 				continue;
 
 			// the number of covered is the same as the neighborcount
-			if (m->returnNeighborCount(c, r) != 0 && m->returnNeighborCount(c, r) == m->countCovered(c, r))
+			if (m->returnNeighborCount(c, r) == m->countCovered(c, r))
 			{
 				// to examine 8 adjacent tiles
 				for (int yoff = -1; yoff <= 1; ++yoff)
@@ -74,8 +84,8 @@ void basicFlagging(MineSweeper* m, vector<string>* orders)
 							int col = c + xoff;
 							int row = r + yoff;
 
-							if (col > -1 && col < m->returnCol()
-								&& row > -1 && row < m->returnRow())
+							if (col > -1 && col < _col
+								&& row > -1 && row < _row)
 							{
 								// covered and not flagged 
 								// flag the tile!
@@ -83,10 +93,10 @@ void basicFlagging(MineSweeper* m, vector<string>* orders)
 								{
 									orders->push_back(flagClick(col, row));
 
-									cout << "Flagged col: " << col << " row: " << row << endl;
 									m->setFlag(col, row);
-									// set done
 									m->setDone(col, row, true);
+								
+									cout << "Flagged col: " << col << " row: " << row << endl;
 								}
 							}
 						}
@@ -97,11 +107,14 @@ void basicFlagging(MineSweeper* m, vector<string>* orders)
 	}
 }
 
+// order to double click when a open tile has 
+// the exact number of flags neighboring the tile
 void basicDoubleClicking(MineSweeper* m, vector<string>* orders)
 {
-	for (int r = 0; r < m->returnRow(); ++r)
+	int _col = m->returnCol(), _row = m->returnRow();
+	for (int r = 0; r < _row; ++r)
 	{
-		for (int c = 0; c < m->returnCol(); ++c)
+		for (int c = 0; c < _col; ++c)
 		{
 			// when the tile is done or covered, then continue;
 			if (m->returnDone(c, r) || m->returnCovered(c, r))
@@ -119,12 +132,44 @@ void basicDoubleClicking(MineSweeper* m, vector<string>* orders)
 	}
 }
 
+/// Get something functions
+// get empty tile (covered, not flagged)
+vector<int> getEmptyTiles(MineSweeper* m)
+{
+	int _row = m->returnRow(), _col = m->returnCol();
+	vector<int> EmptyTiles;
+	for (int r = 0; r < _row; ++r)
+	{
+		for (int c = 0; c < _col; ++c)
+		{
+			// not flagged and is covered
+			if (!m->returnFlagged(c, r) && m->returnCovered(c, r))
+			{
+				EmptyTiles.push_back(r*_col + c);
+			}
+		}
+	}
+	return EmptyTiles;
+}
+
+// get the prob of guessing random
+double getRandomGuessProb(MineSweeper* m)
+{
+	double numEmptyTiles = getEmptyTiles(m).size();
+	double mineNum = m->returnMineNum();
+	double numFlags = m->countAllFlagged();
+
+	return (mineNum - numFlags) / numEmptyTiles;
+}
+
+// get border tiles
 vector<int> getBorderTiles(MineSweeper* m)
 {
+	int _row = m->returnRow(), _col = m->returnCol();
 	vector<int> borderTiles;
-	for (int r = 0; r < m->returnRow(); ++r)
+	for (int r = 0; r < _row; ++r)
 	{
-		for (int c = 0; c < m->returnCol(); ++c)
+		for (int c = 0; c < _col; ++c)
 		{
 			// when the tile is done or revealed or flagged, then continue;
 			if (m->returnDone(c, r) || !m->returnCovered(c, r) || m->returnFlagged(c, r))
@@ -136,102 +181,96 @@ vector<int> getBorderTiles(MineSweeper* m)
 				bool border = false;
 				for (int xoff = -1; xoff <= 1; ++xoff)
 				{
-					if (xoff != 0 || yoff != 0)
+					if (xoff != 0 || yoff != 0)	// exclude itself
 					{
 						int col = c + xoff;
 						int row = r + yoff;
 
 						// should not be out of bounds 
-						if (col > -1 && col < m->returnCol()
-							&& row > -1 && row < m->returnRow())
+						if (col > -1 && col < _col
+							&& row > -1 && row < _row)
 						{
 							// if one of the neighboring tile is open
 							if (!m->returnCovered(col, row))
 							{
 								// then it is bordertile
-								borderTiles.push_back(r*m->returnCol() + c);
+								borderTiles.push_back(r*_col + c);
 								border = true;
 								break;
 							}
 						}
 					}
 				}
-				if (border) break;
+				if (border) break;	// only one open tile is needed to determine
 			}
 		}
 	}
 	return borderTiles;
 }
 
-vector<int> getEmptyTiles(MineSweeper* m)
+// get connected border tiles (stores all section)
+vector< vector<int> > getConnectedBorderTiles(MineSweeper *m)
 {
-	vector<int> EmptyTiles;
-	int mineRow = m->returnRow(), mineCol = m->returnCol();
-	for (int r = 0; r < mineRow; ++r)
-	{
-		for (int c = 0; c < mineCol; ++c)
-		{
-			// not flagged and is covered
-			if (!m->returnFlagged(c, r) && m->returnCovered(c, r))
-			{
-				EmptyTiles.push_back(r*m->returnCol() + c);
-			}
-		}
-	}
-	return EmptyTiles;
-}
+	int _row = m->returnRow(), _col = m->returnCol();
+	auto borderTiles = getBorderTiles(m);
 
-vector< vector<int> > getConnectedBorderTiles(MineSweeper *m, vector<int> borderTiles)
-{
-	vector< vector<int> > k;
-	vector<int> covered;
+	vector< vector<int> > connectedBorderTiles;
+
+	vector<int> allfinished; 	// where the finished tiles go
 
 	while (true)
 	{
 		list<int> queue;
-		vector<int> finishedRegion;
+		vector<int> section;
 
 		for (auto& firstT: borderTiles)
 		{
-			if (std::find(covered.begin(), covered.end(), firstT) == covered.end()) {
+			// search bordertiles already in allfinished
+			if (std::find(allfinished.begin(), allfinished.end(), firstT) == allfinished.end())
+			{
+				// if not, put it in queue
 				queue.push_back(firstT);
 				break;
 			}
 		}
 		
-		if (queue.size() == 0)
+		if (queue.size() == 0)		// All section finished
 			break;
 
-		while(queue.size() != 0)
+		while(queue.size() != 0)	// section is not finished
 		{
 			int curTile = queue.front();
 			queue.pop_front();
 
-			int curCol = curTile % m->returnCol();
-			int curRow = curTile / m->returnCol();
+			int curCol = curTile % _col;
+			int curRow = curTile / _col;
 			
-			finishedRegion.push_back(curTile);
-			covered.push_back(curTile);
+			section.push_back(curTile);
+			allfinished.push_back(curTile);
 
 			for (auto& tile: borderTiles)
 			{
-				int tileCol = tile % m->returnCol();
-				int tileRow = tile / m->returnCol();
+				int tileCol = tile % _col;
+				int tileRow = tile / _col;
 
 				bool isConnected = false;
 				
-				if (std::find(finishedRegion.begin(), finishedRegion.end(), tile) != finishedRegion.end())
+				// if the tile is already in section
+				if (std::find(section.begin(), section.end(), tile) != section.end())
+					// pass the tile 
 					continue;
 
 				// the distance should be less than 2 to have common open tile 
 				if (abs(curCol - tileCol) <= 2 || abs(curRow - tileRow) <= 2)
 				{
-					for (int r = 0; r < m->returnRow(); ++r)
+					for (int r = 0; r < _row; ++r)
 					{
-						for (int c = 0; c < m->returnCol(); ++c)
+						for (int c = 0; c < _col; ++c)
 						{
 							if (!m->returnCovered(c, r))
 							{
+								// the connected tiles should share 
+								// at least one open tile on the side
 								if (abs(curCol - c) <= 1 && abs(curRow - r) <= 1 &&
 									abs(tileCol - c) <= 1 && abs(tileRow - r) <= 1)
 								{
@@ -243,66 +282,108 @@ vector< vector<int> > getConnectedBorderTiles(MineSweeper *m, vector<int> border
 						if (isConnected) break;
 					}
 				}
+				// tile is not connected, next tile called
+				if (!isConnected) continue;		 
 
-				if (!isConnected) continue;
-
+				// if the connected tile for the section is not in queue
 				if (find(queue.begin(), queue.end(), tile) == queue.end())
+					// add the tile to queue and check for that one again	
 					queue.push_back(tile);
 			}
 		}
-		k.push_back(finishedRegion);
+		// one section is finished, add section to the big array.
+		connectedBorderTiles.push_back(section);
 	}
-	return k;
+	return connectedBorderTiles;
 }
 
-double getRandomGuessProb(MineSweeper* m)
-{
-	int numEmptyTiles = getEmptyTiles(m).size();
-	int mineNum = m->returnMineNum();
-	int numFlags = m->countAllFlagged();
-
-	return double(mineNum - numFlags) / double(numEmptyTiles);
-}
-
+/// AI functions 
+// Guess random!
 void randomGuess(MineSweeper* m, vector<string>* orders)
 {
-	vector<int> emptyTiles = getEmptyTiles(m);
+	auto emptyTiles = getEmptyTiles(m);
 	int mineNum = m->returnMineNum();
 	int numFlags = m->countAllFlagged();
+
 	srand(time(NULL));
-	int k = emptyTiles[rand() % emptyTiles.size()];
-	int col = k % m->returnCol(), row = k / m->returnCol();
+	int randomEmptyTile = emptyTiles[rand() % emptyTiles.size()];
+	int col = randomEmptyTile % m->returnCol(), row = randomEmptyTile / m->returnCol();
 	orders->push_back(simpleClick(col, row));
 	cout << "AI guessed Col: " << col << " Row: " << row << " from the empty tiles" << endl;
-	cout << "with " << double(mineNum-numFlags) / double(emptyTiles.size()) * 100 << "% chance of the tile being mine." << endl;
+	cout << "with " << double(mineNum-numFlags) / double(emptyTiles.size()) * 100 
+		<< "% chance of the tile being mine." << endl;
 }
 
-void tankRecurse(vector<int> section, MineSweeper* m, int k, 
-	bool borderOptimization, map<int, vector<map<int, bool>>>* solutions, int* test)
+// using recusion find all the mine configurations
+// that one section can possilby have 
+void bruteRecurse(MineSweeper* m, map<int, vector<map<int, bool>>>* sectionSolutions, 
+	vector<int> section, bool borderOptimization, int depthK, int* functionCalls)
 {
-	++(*test);
+	++(*functionCalls);
 	int totalMineNum = m->returnMineNum();
 	int flagCount = m->countAllFlagged();
-	int mineCol = m->returnCol(), mineRow = m->returnRow();
+	int _col = m->returnCol(), _row = m->returnRow();
 	
 	// total flagcount cannot exceed the total mineNum
 	if (flagCount > totalMineNum) return;
 	
+	// if the flagcount is bigger than the neighborcount already?
+	// then, return before it goes through more recursion.
+	// for more optimization, the open tiles for the section can be
+	// put into a container to be looped
+	if (depthK != section.size()) {
+		for (auto& anyTile : section)
+		{
+			int tileCol = anyTile % _col, tileRow = anyTile / _col;
+			for (int yoff = -1; yoff <= 1; ++yoff)
+			{
+				for (int xoff = -1; xoff <= 1; ++xoff)
+				{
+					int c = tileCol + xoff;
+					int r = tileRow + yoff;
+					// within in the range
+					if (c > -1 && c < _col &&
+						r > -1 && r < _row)
+					{
+						// should be revealed
+						if (!m->returnCovered(c, r))
+						{
+							// if the flagcount is bigger than the neighborcount already?
+							// then, return before it goes through more recursion.
+							if (m->countFlag(c, r) > m->returnNeighborCount(c, r))
+								return;
+						}
+					}
+				}
+			}
+		}
+		int thisTile = section[depthK];
+		int qCol = thisTile % _col;
+		int qRow = thisTile / _col;
+
+		m->setFlag(qCol, qRow, true);		// guess set
+		bruteRecurse(m, sectionSolutions, section, 
+			borderOptimization, depthK + 1, functionCalls);
+		m->setFlag(qCol, qRow, false);		// guess unset
+		bruteRecurse(m, sectionSolutions, section, 
+			borderOptimization, depthK + 1, functionCalls);
+	}
+
 	// DFS Search
 	// go to depth k and check it is correct
-	if (k == section.size())
+	else if (depthK == section.size())
 	{
-		for (auto& tile : section)
+		for (auto& anyTile : section)
 		{
-			int tCol = tile % mineCol, tRow = tile / mineCol;
+			int tCol = anyTile % _col, tRow = anyTile / _col;
 			for (int yoff = -1; yoff <= 1; ++yoff)
 			{
 				for (int xoff = -1; xoff <= 1; ++xoff)
 				{
 					int c = tCol + xoff, r = tRow + yoff;
 					// within in the range
-					if (c > -1 && c < mineCol &&
-						r > -1 && r < mineRow)
+					if (c > -1 && c < _col &&
+						r > -1 && r < _row)
 					{
 						// should be revealed
 						if (!m->returnCovered(c, r))
@@ -321,142 +402,141 @@ void tankRecurse(vector<int> section, MineSweeper* m, int k,
 		if (!borderOptimization && m->countAllFlagged() != totalMineNum)
 			return;
 
-		map<int, bool> solution;
+		map<int, bool> oneSectionSolution;	// store a one configuration
+
 		int mineCountForSection = 0;
-		for (auto& i : section)
+		for (auto& eachTile : section)
 		{
-			int col = i % m->returnCol(), row = i / m->returnCol();
-			bool flagged = m->returnFlagged(col, row);
-			solution.insert(make_pair(i, flagged));
+			int tCol = eachTile % _col, tRow = eachTile / _col;
+			bool flagged = m->returnFlagged(tCol, tRow);
+			oneSectionSolution.insert(make_pair(eachTile, flagged));
 			if (flagged) ++mineCountForSection;
 		}
-		auto mineCountFound = solutions->find(mineCountForSection);
+
+		auto mineCountFound = sectionSolutions->find(mineCountForSection);
+
 		// if there isnt a vector for the mine count
-		if (mineCountFound == solutions->end())
+		if (mineCountFound == sectionSolutions->end())
 		{
-			vector<map<int, bool>> kool;
-			kool.push_back(solution);
-			solutions->insert(make_pair(mineCountForSection, kool));
+			vector<map<int, bool>> vectorSectionSolution;
+			vectorSectionSolution.push_back(oneSectionSolution);
+			sectionSolutions->insert(make_pair(mineCountForSection, vectorSectionSolution));
 		}
 		// if there is
 		else
 		{
-			mineCountFound->second.push_back(solution);
+			mineCountFound->second.push_back(oneSectionSolution);
 		}
-
 		return;
 	}
-
-	// if the flagcount is bigger than the neighborcount already?
-	// then, return before it goes through more recursion.
-	// for more optimization, the open tiles for the section can be
-	// put into a container to be looped
-	for (auto& tile1 : section)
-	{
-		int tCol1 = tile1 % mineCol, tRow1 = tile1 / mineCol;
-		for (int yoff = -1; yoff <= 1; ++yoff)
-		{
-			for (int xoff = -1; xoff <= 1; ++xoff)
-			{
-				int c = tCol1 + xoff;
-				int r = tRow1 + yoff;
-				// within in the range
-				if (c > -1 && c < mineCol &&
-					r > -1 && r < mineRow)
-				{
-					// should be revealed
-					if (!m->returnCovered(c, r))
-					{
-						// if the flagcount is bigger than the neighborcount already?
-						// then, return before it goes through more recursion.
-						if (m->countFlag(c, r) > m->returnNeighborCount(c, r))
-							return;
-					}
-				}
-			}
-		}
-	}
-	int location = section[k];
-	int qCol = location % m->returnCol();
-	int qRow = location / m->returnCol();
-
-	m->setFlag(qCol, qRow, true);
-	tankRecurse(section, m, k + 1, borderOptimization, solutions, test);
-	m->setFlag(qCol, qRow, false);
-	tankRecurse(section, m, k + 1, borderOptimization, solutions, test);
 }
 
-void tankSolver(MineSweeper* m, vector<string>* orders)
+// The master function (calculate probablity)
+void bruteSolver(MineSweeper* m, vector<string>* orders)
 {
-	auto borderTiles = getBorderTiles(m);
-	auto emptyTiles = getEmptyTiles(m);
-	int test = 0;
-	vector< vector<int> > connectedTiles;
+	int _col = m->returnCol(), _row = m->returnRow();
+	int bruteRecurseCalls = 0;
+
+	vector<vector<int>> connectedTiles;
+	auto emptyTiles = getEmptyTiles(m);	
+
 	vector<map<int, vector<map<int, bool>>>> bigSolutions;
-	bool borderOptimization = false;
-	// endGame tactics
+	
+	bool borderOptimization = false;		// true => bordertile divided by sections
+
+	// if there is less than 23 tiles left
 	if (emptyTiles.size() < 23)
 	{
+		// then brute force all left tiles
 		connectedTiles.push_back(emptyTiles);
 	}
 	else
 	{
+		// divide bordertile by sections
 		borderOptimization = true;
-		connectedTiles = getConnectedBorderTiles(m, borderTiles);
+		connectedTiles = getConnectedBorderTiles(m);
 	}
-	int conSize = connectedTiles.size();
-	if (conSize == 0) {
+
+	int borderSectionSize = connectedTiles.size();
+	if (borderSectionSize == 0) 
+	{
 		cout << "Something went wrong... there is no bordertiles" << endl;
 		cout << "Therefore, AI will guess random empty tile" << endl;
 		randomGuess(m, orders);
-		system("pause");
+		// system("pause");
 		return; // something is wrong...
 	}
 
-	for (int s = 0; s < conSize; ++s)
+	for (int s = 0; s < borderSectionSize; ++s)
 	{
 		// a set of solutions for a section
-		map<int, vector<map<int, bool>>> solutions;
+		map<int, vector<map<int, bool>>> sectionSolutions;
 
 		// not to cause a problem, create a copy of m
-		auto&& mcopy = MineSweeper(*m);
-		int sectionSize = connectedTiles[s].size();
-		cout << "Size of section: " << sectionSize << endl;
-		if (sectionSize >= 17 && sectionSize < 25) {
-			cout << "This recursion will take some time..." << endl;
-			tankRecurse(connectedTiles[s], &mcopy, 0, borderOptimization, &solutions, &test);
-		}
-		else if (sectionSize >= 27 && conSize == 1)
+		MineSweeper mcopy(*m);
+
+		int sectionBlockSize = connectedTiles[s].size();
+		cout << "Size of section: " << sectionBlockSize << endl;
+		
+		// start bruteforcing
+		if (sectionBlockSize >= 30 && s == borderSectionSize - 1
+			&& bigSolutions.size() == 0)
 		{
-			cout << "This recursion will take extreme amount of time..." << endl;
-			cout << "And there is only one section" << endl;
-			cout << "Therefore, it is a better choice to make a guess..." << endl;
-			randomGuess(m, orders);
-			return;
+			cout << "This recursion may take extreme amount of time..." << endl;
+			cout << "And there no solutions possible" << endl;
+			cout << "It may be a better to guess..." << endl;
+			cout << "Will you guess? y or n: ";
+			string yesOrNo;
+			getline(cin, yesOrNo);
+			while(yesOrNo != "y" && yesOrNo != "n") 
+			{
+				cout << "Invalid input. Try again." << endl;
+				cout << "Will you guess? y or n: ";
+				getline(cin, yesOrNo);
+			}
+			if (yesOrNo == "y") 
+			{
+				randomGuess(m, orders);
+				return;
+			}
+			else if (yesOrNo == "n")
+			{
+				bruteRecurse(&mcopy, &sectionSolutions, connectedTiles[s],
+					borderOptimization, 0, &bruteRecurseCalls);
+			}
 		}
-		else if (sectionSize >= 27 && conSize >= 1 && s == conSize - 1)
-		{
-			cout << "This recursion will take extreme amount of time..." << endl;
-			cout << "It is highly likely that multiple sections are over limit." << endl;
-			cout << "Therefore, we make a guess..." << endl;
-			randomGuess(m, orders);
-			return;
-		}
-		else if (sectionSize >= 27 && conSize >= 1)
+		else if (sectionBlockSize >= 30 && borderSectionSize > 1)
 		{
 			cout << "This recursion will take extreme amount of time..." << endl;
 			cout << "But there are more than one section" << endl;
-			cout << "Therefore, it is a better choice to pass this section and come back later" << endl;
-			continue;
+			cout << "Will you pass? y or n: ";
+			string yesOrNo;
+			getline(cin, yesOrNo);
+			while(yesOrNo != "y" && yesOrNo != "n") 
+			{
+				cout << "Invalid. Try again." << endl;
+				cout << "Will you pass? y or n: ";
+				getline(cin, yesOrNo);
+			}
+			if (yesOrNo == "y") 
+			{
+				continue;
+			}				
+			else if (yesOrNo == "n")
+			{
+				bruteRecurse(&mcopy, &sectionSolutions, connectedTiles[s],
+					borderOptimization, 0, &bruteRecurseCalls);	
+			}		
 		}
 		else 
 		{
-			tankRecurse(connectedTiles[s], &mcopy, 0, borderOptimization, &solutions, &test);
+			bruteRecurse(&mcopy, &sectionSolutions, connectedTiles[s],
+				borderOptimization, 0, &bruteRecurseCalls);
 		}
-		bigSolutions.push_back(solutions);
+		bigSolutions.push_back(sectionSolutions);
 	}
 
-	// probability calculation 
+	/// probability calculation 
 	// count how many times there were flags on each tile
 	vector<map<int, map<int, int>>> sectionSum;
 	for (auto& sectionSol : bigSolutions)
@@ -539,13 +619,15 @@ void tankSolver(MineSweeper* m, vector<string>* orders)
 						{
 							probStore[tile] = 0;
 							probStore[tile] += double(timesMines) / double(solutionSets[9999])
-								* double(bigSolutions[p][mineNumK].size()) / double(sectionSolutionTotalStore[p])
+								* double(bigSolutions[p][mineNumK].size()) 
+								/ double(sectionSolutionTotalStore[p])
 								* mineNumK;
 						}
 						else
 						{
 							probStore[tile] += double(timesMines) / double(solutionSets[9999])
-								* double(bigSolutions[p][mineNumK].size()) / double(sectionSolutionTotalStore[p])
+								* double(bigSolutions[p][mineNumK].size()) 
+								/ double(sectionSolutionTotalStore[p])
 								* mineNumK;
 						}
 					}
@@ -560,8 +642,8 @@ void tankSolver(MineSweeper* m, vector<string>* orders)
 			{
 				if (p.second == 0)
 				{
-					int chosenTileCol = p.first % m->returnCol();
-					int chosenTileRow = p.first / m->returnCol();
+					int chosenTileCol = p.first % _col;
+					int chosenTileRow = p.first / _col;
 					std::cout << "AI chosed Col: " << chosenTileCol << " Row: "
 						<< chosenTileRow << " with the chance of "
 						<< minProbTile.second * 100 << "%"
@@ -571,9 +653,10 @@ void tankSolver(MineSweeper* m, vector<string>* orders)
 			}
 		}
 		else if (minProbTile.second < randomProb) {
-			int chosenTileCol = minProbTile.first % m->returnCol();
-			int chosenTileRow = minProbTile.first / m->returnCol();
-			std::cout << "AI chosed Col: " << chosenTileCol << " Row: " << chosenTileRow << " with the chance of "
+			int chosenTileCol = minProbTile.first % _col;
+			int chosenTileRow = minProbTile.first / _col;
+			std::cout << "AI chosed Col: " << chosenTileCol << " Row: " 
+				<< chosenTileRow << " with the chance of "
 				<< minProbTile.second * 100 << "%"
 				<< " the tile being mine" << std::endl;
 			orders->push_back(simpleClick(chosenTileCol, chosenTileRow));
@@ -641,8 +724,8 @@ void tankSolver(MineSweeper* m, vector<string>* orders)
 			{
 				if (p.second == 0)
 				{
-					int chosenTileCol = p.first % m->returnCol();
-					int chosenTileRow = p.first / m->returnCol();
+					int chosenTileCol = p.first % _col;
+					int chosenTileRow = p.first / _col;
 					std::cout << "AI chosed Col: " << chosenTileCol << " Row: "
 						<< chosenTileRow << " with the chance of "
 						<< minProbTile.second * 100 << "%"
@@ -652,9 +735,10 @@ void tankSolver(MineSweeper* m, vector<string>* orders)
 			}
 		}
 		else if (minProbTile.second < randomProb) {
-			int chosenTileCol = minProbTile.first % m->returnCol();
-			int chosenTileRow = minProbTile.first / m->returnCol();
-			std::cout << "AI chosed Col: " << chosenTileCol << " Row: " << chosenTileRow << " with the chance of "
+			int chosenTileCol = minProbTile.first % _col;
+			int chosenTileRow = minProbTile.first / _col;
+			std::cout << "AI chosed Col: " << chosenTileCol << " Row: " 
+				<< chosenTileRow << " with the chance of "
 				<< minProbTile.second * 100 << "%"
 				<< " the tile being mine" << std::endl;
 			orders->push_back(simpleClick(chosenTileCol, chosenTileRow));
@@ -669,7 +753,9 @@ void tankSolver(MineSweeper* m, vector<string>* orders)
 			randomGuess(m, orders);
 		}
 	}
-
+	cout << endl << "bruteRecurse was called " << bruteRecurseCalls << " times. " << endl << endl;
+	
+	/// legacy probability	
 	/*
 	vector< map<int, int>> sectionSum;
 	for (auto& sectionSol : bigSolutions)
@@ -706,7 +792,7 @@ void tankSolver(MineSweeper* m, vector<string>* orders)
 	}
 	
 	// when there is more than one section
-	if (conSize > 1)
+	if (borderSectionSize > 1)
 	{
 		vector<int> tileStore;			// store tile
 		vector<double> probStore;		// store probability
@@ -737,25 +823,25 @@ void tankSolver(MineSweeper* m, vector<string>* orders)
 		orders->push_back(simpleClick(col, row));
 	}
 	*/
-	cout << endl << "tankRecurse was called " << test << " times. " << endl << endl;
-
 }
 
+// the wrapper
 void AI(MineSweeper* m, json* to_send)
 {
-	// first is for flagging
-	vector<string> orders;
+	// store scripts
+	vector<string> scripts;
 	
 	// basic flagging
-	basicFlagging(m, &orders);
+	basicFlagging(m, &scripts);
 
 	// Double clicking
-	basicDoubleClicking(m, &orders);
+	basicDoubleClicking(m, &scripts);
 
-	if (orders.size() == 0)
+	if (scripts.size() == 0)
 	{
 		cout << "Guesses start..." << endl;
-		tankSolver(m, &orders);
+		bruteSolver(m, &scripts);
 	}
-	(*to_send)["orders"] = orders;
+
+	(*to_send)["orders"] = scripts;
 }
