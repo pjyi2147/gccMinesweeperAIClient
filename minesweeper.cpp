@@ -168,7 +168,7 @@ void MineSweeper::countMine(int col, int row)
 			if (c > -1 && c < this->_col
 				&& r > -1 && r < this->_row)
 			{
-				if (this->_minefield[r][c].isMine()) total += 1;
+				if (this->_minefield[r][c].isMine()) ++total;
 			}
 		}
 	}
@@ -191,7 +191,7 @@ int MineSweeper::countFlag(int col, int row)
 				if (c > -1 && c < this->_col
 					&& r > -1 && r < this->_row)
 				{
-					if (this->_minefield[r][c].isFlagged()) total += 1;
+					if (this->_minefield[r][c].isFlagged()) ++total;
 				}
 			}
 		}
@@ -357,7 +357,7 @@ int MineSweeper::countCovered(int col, int row)
 				if (c > -1 && c < this->_col
 					&& r > -1 && r < this->_row)
 				{
-					if (!this->_minefield[r][c].isRevealed()) total += 1;
+					if (!this->_minefield[r][c].isRevealed()) ++total;
 				}
 			}
 		}
