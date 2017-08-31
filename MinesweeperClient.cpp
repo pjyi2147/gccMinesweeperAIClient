@@ -22,7 +22,6 @@ void GameLoop(json* info, json* to_send, MineSweeper *m)
 
 int main()
 {
-	try {
 	cout << "Minesweeper AI" << endl << endl;
 	int col, row, mineNum;
 	startGamefunction(col, row, mineNum);
@@ -46,10 +45,4 @@ int main()
 	cin.ignore();
 	cin.get();
 	return 0;
-	}
-	catch (std::exception& e) {
-		cout << e.what() << endl;
-		cin.ignore();
-		cin.get();
-	}
 }
