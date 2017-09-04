@@ -162,6 +162,30 @@ double getRandomGuessProb(MineSweeper* m)
 	return (mineNum - numFlags) / numEmptyTiles;
 }
 
+// get the open tiles for one tile
+vector<int> getOpenedTilesForOne(MineSweeper* m, int col, int row) 
+{
+	vector<int> toReturn;
+	int _col = m->returnCol(), _row = m->returnRow();
+	for (int xoff = -1; xoff <= 1; ++xoff) 
+	{
+		for (int yoff = -1; yoff <= 1; ++yoff) 
+		{
+			int c = col + xoff;
+			int r = row + yoff;
+			if (c < _col && c > -1 && 
+				r < _row && r > -1)
+			{
+				if (!m->returnCovered(c, r)) 
+				{ 
+					toReturn.push_back(r*m->returnCol() + c);
+				}
+			}
+		}
+	}
+	return toReturn;
+}
+
 // get border tiles
 vector<int> getBorderTiles(MineSweeper* m)
 {
@@ -295,6 +319,40 @@ vector< vector<int> > getConnectedBorderTiles(MineSweeper *m)
 		connectedBorderTiles.push_back(section);
 	}
 	return connectedBorderTiles;
+}
+
+vector<vector<vector<int>>> getGroupedBorderTiles(MineSweeper *m)
+{
+	vector<vector<vector<int>>> groupedBorderTiles;
+	int _col = m->returnCol(), _row = m->returnRow();
+	auto connectedBorderTiles = getConnectedBorderTiles(m);
+	for (auto& section : connectedBorderTiles) 
+	{
+		vector<vector<int>> oneSectionGroupedTiles;
+		while (section.size() > 0) 
+		{
+			int firstTile = section.front();
+			section.erase(section.begin());
+			vector<int> groupedTiles;
+			auto firstTileOpen = getOpenedTilesForOne(m, firstTile % _col, firstTile / _col);
+			groupedTiles.push_back(firstTile);
+			int i = 0;
+			while (i < section.size())  
+			{
+				int tile = section[i];
+				int tileCol = tile % _col, tileRow = tile / _col;
+				if (getOpenedTilesForOne(m, tileCol, tileRow) == firstTileOpen) 
+				{
+					groupedTiles.push_back(tile);
+					section.erase(section.begin() + i);
+				}	
+				else ++i;
+			}
+			oneSectionGroupedTiles.push_back(groupedTiles);
+		}
+		groupedBorderTiles.push_back(oneSectionGroupedTiles);
+	}
+	return groupedBorderTiles;
 }
 
 /// AI functions 
@@ -431,6 +489,200 @@ void bruteRecurse(MineSweeper* m, map<int, vector<map<int, bool>>>* sectionSolut
 	}
 }
 
+
+
+
+
+
+
+
+
+
+void recurseFinder(MineSweeper* mcopy, vector<vector<int>> section, 
+    vector<vector<int>>* sectionSolution, vector<int>* groupSol, int depth)
+{
+    int _col = mcopy->returnCol(), _row = mcopy->returnRow();
+    
+    // excaper    
+    if (depth == section.size()) 
+    {
+        for (auto& group : section) 
+        {
+            int tile = group[0];
+            int tileRow = tile / _col, tileCol = tile % _col;
+
+            auto openTiles = getOpenedTilesForOne(mcopy, tileCol, tileRow);
+            for (auto& openTile : openTiles) 
+            {
+                int openTileRow = openTile / _col, openTileCol = openTile % _col;
+                if (mcopy->countFlag(openTileCol, openTileRow) 
+                    != mcopy->returnNeighborCount(openTileCol, openTileRow)) 
+                {
+                    return;
+                }    
+			}
+		}
+		
+		// if not returned --> solution
+		sectionSolution->push_back(*groupSol);
+    }
+
+	// recurser 
+	else 
+	{
+		// Checker 
+		for (auto& group : section) 
+		{
+			int tile = group[0];
+			int tileRow = tile / _col, tileCol = tile % _col;
+
+			auto openTiles = getOpenedTilesForOne(mcopy, tileCol, tileRow);
+			for (auto& openTile : openTiles) 
+			{
+				int openTileRow = openTile / _col, openTileCol = openTile % _col;
+				int countF = mcopy->countFlag(openTileCol, openTileRow);
+				int countN = mcopy->returnNeighborCount(openTileCol, openTileRow);
+				if (countF > countN)
+				{
+					return;
+				}    
+			}
+		}
+	
+		auto group1 = section[depth];
+
+		for (int i = 0; i < group1.size() + 1; ++i) 
+		{
+			if (i == 0) 
+			{
+				groupSol->push_back(i);
+				recurseFinder(mcopy, section, sectionSolution, 
+					groupSol, depth + 1);
+				groupSol->pop_back();
+			}
+			else 
+			{
+				int tile1 = group1[i - 1];
+				int tile1Row = tile1 / _col, tile1Col = tile1 % _col;
+				mcopy->setFlag(tile1Col, tile1Row, true);
+				groupSol->push_back(i);
+				recurseFinder(mcopy, section, sectionSolution, 
+					groupSol, depth + 1);
+				groupSol->pop_back();
+
+				if (i == group1.size()) 
+				{
+					for (int k = 0; k < group1.size(); ++k) 
+					{
+						int tilek = group1[k];
+						int tilekRow = tilek / _col, tilekCol = tilek % _col;
+						mcopy->setFlag(tilekCol, tilekRow, false);
+					}
+				}
+			}
+		}
+	}
+}
+
+
+vector<vector<vector<int>>> bruteSolFinder(MineSweeper* m, 
+	vector<vector<vector<int>>> groupedTiles)
+{
+    vector<vector<vector<int>>> allSolutions;
+    MineSweeper mcopy(*m);
+    for (auto& section : groupedTiles) 
+    {
+        vector<vector<int>> sectionSolution;
+        vector<int> groupSol;   
+		recurseFinder(&mcopy, section, &sectionSolution, &groupSol, 0);
+		allSolutions.push_back(sectionSolution);
+		groupSol.clear();
+	}
+	return allSolutions;
+}
+
+map<int, double> bruteProbCal(MineSweeper* m, 
+	vector<vector<vector<int>>> groupedTiles, vector<vector<vector<int>>> groupedSol)
+{
+	double p = getRandomGuessProb(m);
+	int _col = m->returnCol(), _row = m->returnRow();
+
+	vector<vector<vector<double>>> groupProb;
+	map<int, double> tileProb;
+	
+	/// get section probabilities
+	for (int i = 0; i < groupedSol.size(); ++i)			// section
+	{
+		double section_value_sum = 0;
+		vector<double> sectionGroupSum;
+		for (int j = 0; j < groupedSol[i].size(); ++j)		// # of solutions
+		{
+			double solutionPerProb = 1;
+			for (int k = 0; k < groupedSol[i][j].size(); ++k)
+			// group numbers;
+			{
+				int mineN = groupedSol[i][j][k];
+				int groupSize = groupedTiles[i][k].size();
+				solutionPerProb *= nChoosek(groupSize, mineN);
+				int pmp = 0;
+				while (pmp < groupSize)
+				{
+					if (pmp < mineN) solutionPerProb *= p;
+					else solutionPerProb *= (1 - p);
+					++pmp;
+				}
+			}
+			sectionGroupSum.push_back(solutionPerProb);
+			section_value_sum += solutionPerProb;
+		}
+
+		for (int j = 0; j < groupedSol[i].size(); ++j) 
+		{
+			for (int k = 0; k < groupedSol[i][j].size(); ++k) 
+			{
+				int mineN = groupedSol[i][j][k];
+				int groupSize = groupedTiles[i][k].size();
+				
+				if (mineN == 0) 
+				{
+					for (int tile : groupedTiles[i][k])
+					{
+						auto tileIterator = tileProb.find(tile);
+						if (tileIterator == tileProb.end())
+						{
+							tileProb[tile] = 0;
+						}
+					}					
+				}
+				else 
+				{
+					for (int tile : groupedTiles[i][k])
+					{
+						auto tileIterator = tileProb.find(tile);
+						if (tileIterator == tileProb.end())
+						{
+							tileProb[tile] = sectionGroupSum[j] 
+								* double(mineN) / double(groupSize)
+								/ section_value_sum;
+						}
+						else 
+						{ 
+							tileProb[tile] += sectionGroupSum[j] 
+								* double(mineN) / double(groupSize)
+								/ section_value_sum;
+						}
+					}
+				}
+			}
+		}
+	}
+	return tileProb;
+}
+
+
+
+
+
 // The master function (calculate probablity)
 void bruteSolver(MineSweeper* m, vector<string>* orders)
 {
@@ -457,8 +709,22 @@ void bruteSolver(MineSweeper* m, vector<string>* orders)
 		connectedTiles = getConnectedBorderTiles(m);
 	}
 
+
+
+
+
+	auto groupedTiles = getGroupedBorderTiles(m);
+	auto allSolutions = bruteSolFinder(m, groupedTiles);
+	auto groupedProb = bruteProbCal(m, groupedTiles, allSolutions);
+	cout << "group Solving done" << endl;
+	cout << endl;
+	
+
+	
+	
+	
 	int borderSectionSize = connectedTiles.size();
-	if (borderSectionSize == 0) 
+	if (borderSectionSize == 0)
 	{
 		cout << "Something went wrong... there is no bordertiles" << endl;
 		cout << "Therefore, AI will guess random empty tile" << endl;
@@ -477,7 +743,7 @@ void bruteSolver(MineSweeper* m, vector<string>* orders)
 
 		int sectionBlockSize = connectedTiles[s].size();
 		cout << "Size of section: " << sectionBlockSize << endl;
-		
+		 
 		// start bruteforcing
 		if (sectionBlockSize >= 30 && s == borderSectionSize - 1
 			&& bigSolutions.size() == 0)

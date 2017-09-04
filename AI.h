@@ -13,8 +13,19 @@ void basicDoubleClicking(MineSweeper* m, vector<string>* orders);
 vector<int> getEmptyTiles(MineSweeper* m);
 double getRandomGuessProb(MineSweeper* m);
 
+vector<int> getOpenedTilesForOne(MineSweeper* m, int col, int row);
+
 vector<int> getBorderTiles(MineSweeper* m);
 vector<vector<int>> getConnectedBorderTiles(MineSweeper *m);
+vector<vector<vector<int>>> getGroupedBorderTiles(MineSweeper *m);
+
+void recurseFinder(MineSweeper* mcopy, vector<vector<int>> section, 
+    vector<vector<int>>* sectionSolution, vector<int>* groupSol, int depth);
+
+vector<vector<vector<int>>> bruteSolFinder(MineSweeper* m, vector<vector<vector<int>>> groupedTiles);
+map<int, double> bruteProbCal(MineSweeper* m,
+	vector<vector<vector<int>>> groupedTiles, vector<vector<vector<int>>> groupedSol);
+
 
 void randomGuess(MineSweeper* m, vector<string>* orders);
 void bruteRecurse(MineSweeper* m, map<int, vector<map<int, bool>>>* sectionSolutions, 
