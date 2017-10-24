@@ -24,7 +24,7 @@ void recurseFinder(MineSweeper* mcopy, vector<vector<int>> section,
 
 vector<vector<vector<int>>> bruteSolFinder(MineSweeper* m, vector<vector<vector<int>>> groupedTiles);
 map<int, double> bruteProbCal(MineSweeper* m,
-	vector<vector<vector<int>>> groupedTiles, vector<vector<vector<int>>> groupedSol);
+  vector<vector<vector<int>>> groupedTiles, vector<vector<vector<int>>> groupedSol);
 
 
 void randomGuess(MineSweeper* m, vector<string>* orders);
